@@ -1063,15 +1063,15 @@ function createBulbousJar() {
     causticMesh.position.y = JAR_FLOOR_Y + 0.02;
     jarMeshGroup.add(causticMesh);
 
-    // Mesa de Madeira Quente / Acolhedora
-    const tableGeo = new THREE.CylinderGeometry(5.4, 5.5, 0.45, 40);
+    // Base de Madeira Aconchegante (Suporte redondo proporcional ao pote)
+    const tableGeo = new THREE.CylinderGeometry(3.4, 3.65, 0.38, 48);
     const tableMat = new THREE.MeshStandardMaterial({
         color: 0xD4A373,
         roughness: 0.45,
         metalness: 0.04
     });
     const tableMesh = new THREE.Mesh(tableGeo, tableMat);
-    tableMesh.position.y = JAR_FLOOR_Y - 0.42;
+    tableMesh.position.y = JAR_FLOOR_Y - 0.25;
     tableMesh.receiveShadow = true;
     jarMeshGroup.add(tableMesh);
 
@@ -1127,20 +1127,51 @@ function updateBackgroundSparkles(dt) {
     }
 }
 
-// --- 8. ILUMINAÇÃO DE ESTÚDIO & CENA 3D ---
+// --- 8. ENQUADRAMENTO RESPONSIVO DA CÂMERA & CENA 3D ---
+function updateCameraResponsive() {
+    if (!camera || !renderer) return;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const aspect = width / height;
+
+    camera.aspect = aspect;
+
+    // Área do jogo que deve caber 100% visível na tela sem nenhum corte:
+    // - Largura: barriga do pote (raio ~3.9, largura 7.8) + mesa (~8.1) + margem confortável
+    // - Altura: base da mesa (Y = -4.55) até fruta suspensa no topo (Y = +4.5), total ~9.1 + margem
+    const TARGET_WIDTH = 8.6;   // Margem limpa nas laterais em qualquer celular
+    const TARGET_HEIGHT = 10.5; // Margem limpa entre o topo do pote e o HUD superior
+
+    const baseFov = 44;
+    const tanHalfFov = Math.tan((baseFov * 0.5) * Math.PI / 180);
+
+    // Distância necessária para acomodar largura e altura
+    const reqHeight = Math.max(TARGET_HEIGHT, TARGET_WIDTH / aspect);
+    const targetZ = reqHeight / (2 * tanHalfFov);
+
+    camera.position.z = targetZ;
+
+    // Ponto focal perfeitamente balanceado entre o HUD do topo e a barra inferior
+    const targetCenterY = -0.48;
+    camera.position.y = targetCenterY + (targetZ * 0.040);
+    camera.position.x = 0;
+    camera.lookAt(0, targetCenterY, 0);
+
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+}
+
 function initScene() {
     const canvas = document.getElementById('game-canvas');
     scene = new THREE.Scene();
 
     camera = new THREE.PerspectiveCamera(44, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 0.4, 15.0);
-    camera.lookAt(0, -0.6, 0);
-
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    updateCameraResponsive();
 
     // 1. Luz Ambiente Suave e Clara
     const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.78);
@@ -1273,7 +1304,11 @@ function updateDropperPreview() {
     if (aimingLine) aimingLine.position.x = dropX;
     if (aimingBeam) aimingBeam.position.x = dropX;
 
-    // Calcula a altura de aterrissagem aproximada sob o dropX
+    updateAimTargetRing();
+}
+
+function updateAimTargetRing() {
+    if (!aimingTargetRing) return;
     let landingY = JAR_FLOOR_Y;
     const curR = FRUITS[currentFruitLevel].radius;
     for (let f of fruits) {
@@ -1286,11 +1321,9 @@ function updateDropperPreview() {
         }
     }
 
-    if (aimingTargetRing) {
-        aimingTargetRing.position.set(dropX, landingY + 0.05, 0);
-        const ringScale = curR / 0.35;
-        aimingTargetRing.scale.set(ringScale, ringScale, 1);
-    }
+    aimingTargetRing.position.set(dropX, landingY + 0.05, 0);
+    const ringScale = curR / 0.35;
+    aimingTargetRing.scale.set(ringScale, ringScale, 1);
 }
 
 function getRandomFruit() {
@@ -1305,16 +1338,30 @@ function updateNextFruitUI() {
 // --- 9. CONTROLES (Touch Mobile & Mouse) ---
 function setupControls() {
     const canvas = document.getElementById('game-canvas');
+    const raycaster = new THREE.Raycaster();
+    const planeZ = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+    const hitPoint = new THREE.Vector3();
 
     function updateAim(clientX, clientY) {
         if (hammerMode) return;
-        const normX = (clientX / window.innerWidth) * 2 - 1;
-        // Limita arrasto à largura do gargalo do pote
-        const neckRadius = getJarInnerRadius(DROP_Y) - FRUITS[currentFruitLevel].radius - 0.1;
-        dropX = Math.max(-neckRadius, Math.min(neckRadius, normX * 2.8));
+        const mouse = new THREE.Vector2(
+            (clientX / window.innerWidth) * 2 - 1,
+            -(clientY / window.innerHeight) * 2 + 1
+        );
+        raycaster.setFromCamera(mouse, camera);
+        if (raycaster.ray.intersectPlane(planeZ, hitPoint)) {
+            const neckRadius = Math.max(0.2, getJarInnerRadius(DROP_Y) - FRUITS[currentFruitLevel].radius - 0.08);
+            dropX = Math.max(-neckRadius, Math.min(neckRadius, hitPoint.x));
+        } else {
+            const normX = (clientX / window.innerWidth) * 2 - 1;
+            const neckRadius = Math.max(0.2, getJarInnerRadius(DROP_Y) - FRUITS[currentFruitLevel].radius - 0.08);
+            dropX = Math.max(-neckRadius, Math.min(neckRadius, normX * 2.2));
+        }
 
         if (dropperMesh) dropperMesh.position.x = dropX;
         if (aimingLine) aimingLine.position.x = dropX;
+        if (aimingBeam) aimingBeam.position.x = dropX;
+        updateAimTargetRing();
     }
 
     // Touch
@@ -2141,9 +2188,7 @@ function animate(now) {
 }
 
 function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    updateCameraResponsive();
 }
 
 window.addEventListener('DOMContentLoaded', () => {
