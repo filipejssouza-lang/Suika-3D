@@ -1001,7 +1001,6 @@ function createBulbousJar() {
         clearcoatRoughness: 0.04,
         transmission: 0.72,
         ior: 1.52,
-        thickness: 1.1,
         depthWrite: false
     });
 
