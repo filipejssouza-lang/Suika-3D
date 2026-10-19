@@ -5,20 +5,47 @@
 
 // --- 1. CONFIGURAÇÃO DAS FRUTAS (13 Níveis: Cereja até Rei Melancia Dourada) ---
 const FRUITS = [
-    { level: 0,  name: 'Cereja',                emoji: '🍒', radius: 0.32, color: 0xFF1744, points: 2,    stem: true     },
-    { level: 1,  name: 'Morango',               emoji: '🍓', radius: 0.42, color: 0xFF2A6D, points: 4,    seeds: true    },
-    { level: 2,  name: 'Uva',                   emoji: '🍇', radius: 0.54, color: 0x7B2CBF, points: 8,    grape: true    },
-    { level: 3,  name: 'Tangerina',             emoji: '🍊', radius: 0.68, color: 0xFF8500, points: 16,   stem: true     },
-    { level: 4,  name: 'Laranja',               emoji: '🍋', radius: 0.82, color: 0xFFB703, points: 32,   citrus: true   },
-    { level: 5,  name: 'Maçã',                  emoji: '🍎', radius: 0.98, color: 0xD90429, points: 64,   apple: true    },
-    { level: 6,  name: 'Pera',                  emoji: '🍐', radius: 1.15, color: 0x90BE6D, points: 128,  pear: true     },
-    { level: 7,  name: 'Pêssego',               emoji: '🍑', radius: 1.34, color: 0xFFAFCC, points: 256,  peach: true    },
-    { level: 8,  name: 'Abacaxi',               emoji: '🍍', radius: 1.55, color: 0xE0A96D, points: 512,  pine: true     },
-    { level: 9,  name: 'Melão',                 emoji: '🍈', radius: 1.78, color: 0x52B788, points: 1024, melon: true    },
-    { level: 10, name: 'Melancia',              emoji: '🍉', radius: 2.05, color: 0x2D6A4F, points: 2048, wm: true       },
-    { level: 11, name: 'Pitaya',                emoji: '🌸', radius: 2.22, color: 0xFF007F, points: 4096, pitaya: true   },
-    { level: 12, name: 'Rei Melancia Dourada',  emoji: '👑', radius: 2.38, color: 0xFFD700, points: 8192, goldenWm: true }
+    { level: 0,  name: 'Cereja',                emoji: '🍒', radius: 0.32, color: 0xFF1744, points: 2,    stem: true,     model: 'models/cherry.glb'     },
+    { level: 1,  name: 'Morango',               emoji: '🍓', radius: 0.42, color: 0xFF2A6D, points: 4,    seeds: true,    model: 'models/strawberry.glb' },
+    { level: 2,  name: 'Uva',                   emoji: '🍇', radius: 0.54, color: 0x7B2CBF, points: 8,    grape: true,    model: 'models/grape.glb'      },
+    { level: 3,  name: 'Tangerina',             emoji: '🍊', radius: 0.68, color: 0xFF8500, points: 16,   stem: true,     model: 'models/dekopon.glb'    },
+    { level: 4,  name: 'Laranja',               emoji: '🍋', radius: 0.82, color: 0xFFB703, points: 32,   citrus: true,   model: 'models/persimmon.glb'  },
+    { level: 5,  name: 'Maçã',                  emoji: '🍎', radius: 0.98, color: 0xD90429, points: 64,   apple: true,    model: 'models/apple.glb'      },
+    { level: 6,  name: 'Pera',                  emoji: '🍐', radius: 1.15, color: 0x90BE6D, points: 128,  pear: true,     model: 'models/pear.glb'       },
+    { level: 7,  name: 'Pêssego',               emoji: '🍑', radius: 1.34, color: 0xFFAFCC, points: 256,  peach: true,    model: 'models/peach.glb'      },
+    { level: 8,  name: 'Abacaxi',               emoji: '🍍', radius: 1.55, color: 0xE0A96D, points: 512,  pine: true,     model: 'models/pineapple.glb'  },
+    { level: 9,  name: 'Melão',                 emoji: '🍈', radius: 1.78, color: 0x52B788, points: 1024, melon: true,    model: 'models/melon.glb'      },
+    { level: 10, name: 'Melancia',              emoji: '🍉', radius: 2.05, color: 0x2D6A4F, points: 2048, wm: true,       model: 'models/watermelon.glb' },
+    { level: 11, name: 'Pitaya',                emoji: '🌸', radius: 2.22, color: 0xFF007F, points: 4096, pitaya: true,   model: 'models/pitaya.glb'     },
+    { level: 12, name: 'Rei Melancia Dourada',  emoji: '👑', radius: 2.38, color: 0xFFD700, points: 8192, goldenWm: true, model: 'models/golden_watermelon.glb' }
 ];
+
+const fruitModels = {};
+let gltfLoader = null;
+
+function loadFruitModels() {
+    if (typeof THREE.GLTFLoader === 'undefined') return;
+    gltfLoader = new THREE.GLTFLoader();
+
+    FRUITS.forEach(f => {
+        if (!f.model) return;
+        gltfLoader.load(f.model, (gltf) => {
+            const root = gltf.scene || gltf.scenes[0];
+            root.traverse(child => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            fruitModels[f.level] = root;
+            if (currentFruitLevel === f.level && dropperMesh) {
+                updateDropperPreview();
+            }
+        }, undefined, (err) => {
+            console.warn(`Fallback procedural para ${f.name}:`, err);
+        });
+    });
+}
 
 // --- 2. GEOMETRIA DO POTE GORDINHO (Bulbous Glass Jar) ---
 const JAR_FLOOR_Y = -4.1;
@@ -678,8 +705,14 @@ function createFruitMesh(level) {
     const data = FRUITS[level];
     const group = new THREE.Group();
 
-    // Material de Vinil Esmaltado / Bala de Goma (Clearcoat PBR)
-    let bodyMat;
+    let bodyMesh;
+
+    if (fruitModels[level]) {
+        bodyMesh = fruitModels[level].clone(true);
+        group.add(bodyMesh);
+    } else {
+        // Material de Vinil Esmaltado / Bala de Goma (Clearcoat PBR)
+        let bodyMat;
     if (data.goldenWm) {
         bodyMat = new THREE.MeshPhysicalMaterial({
             map: createGoldenWatermelonTexture(),
@@ -945,6 +978,7 @@ function createFruitMesh(level) {
         }
         group.add(crownGroup);
     }
+    }
 
     // Rostinho Kawaii Aplicado na Frente
     const initialFace = (level === 10 || level === 7 || level === 12) ? 'open_smile' : (level % 3 === 1 ? 'wink' : 'happy');
@@ -957,6 +991,9 @@ function createFruitMesh(level) {
     });
     const faceMesh = new THREE.Mesh(faceGeo, faceMat);
     faceMesh.position.set(0, 0, data.radius * 0.98);
+    if (fruitModels[level]) {
+        faceMesh.visible = false;
+    }
     group.add(faceMesh);
 
     return { group, bodyMesh, faceMesh, initialFace };
@@ -1202,6 +1239,9 @@ function initScene() {
 
     // Linha de Perigo (Deadline pontilhada reativa)
     createDangerLine();
+
+    // Carrega modelos 3D GLB exportados do Blender
+    loadFruitModels();
 
     // Mira e Fruta Suspensa no Topo (Com feixe de luz suave e alvo no fundo)
     createDropper();
