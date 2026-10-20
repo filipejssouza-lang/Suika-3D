@@ -37,6 +37,17 @@ function loadFruitModels() {
                     child.receiveShadow = true;
                 }
             });
+
+            // Normaliza a escala visual do modelo para bater exatamente com o raio de colisão (elimina lacunas de ar!)
+            const bbox = new THREE.Box3().setFromObject(root);
+            const size = new THREE.Vector3();
+            bbox.getSize(size);
+            const modelRadius = Math.max(size.x, size.y, size.z) / 2;
+            if (modelRadius > 0.001) {
+                const targetScale = (f.radius * 0.98) / modelRadius;
+                root.scale.set(targetScale, targetScale, targetScale);
+            }
+
             fruitModels[f.level] = root;
             if (currentFruitLevel === f.level && dropperMesh) {
                 updateDropperPreview();
@@ -786,16 +797,16 @@ function createFruitMesh(level) {
     if (level === 0) {
         // NÍVEL 0: Cerejinhas Gêmeas (Twin Cherries) conectadas por talo duplo
         bodyMesh = new THREE.Group();
-        const singleR = data.radius * 0.74;
+        const singleR = data.radius * 0.78;
         const cherryGeo = new THREE.SphereGeometry(singleR, 24, 20);
 
         const leftCherry = new THREE.Mesh(cherryGeo, bodyMat);
-        leftCherry.position.set(-singleR * 0.72, -singleR * 0.18, 0);
+        leftCherry.position.set(-singleR * 0.65, -singleR * 0.15, 0);
         leftCherry.castShadow = true;
         bodyMesh.add(leftCherry);
 
         const rightCherry = new THREE.Mesh(cherryGeo, bodyMat);
-        rightCherry.position.set(singleR * 0.72, -singleR * 0.08, 0);
+        rightCherry.position.set(singleR * 0.65, -singleR * 0.05, 0);
         rightCherry.castShadow = true;
         bodyMesh.add(rightCherry);
 
@@ -823,10 +834,10 @@ function createFruitMesh(level) {
         bodyMesh = new THREE.Group();
         const goldenAngle = Math.PI * (3 - Math.sqrt(5));
         const grapeCount = 14;
-        const beadRadius = data.radius * 0.32;
+        const beadRadius = data.radius * 0.36;
         const beadGeo = new THREE.SphereGeometry(beadRadius, 16, 12);
 
-        const centerMesh = new THREE.Mesh(new THREE.SphereGeometry(data.radius * 0.65, 18, 14), bodyMat);
+        const centerMesh = new THREE.Mesh(new THREE.SphereGeometry(data.radius * 0.72, 18, 14), bodyMat);
         bodyMesh.add(centerMesh);
 
         for (let i = 0; i < grapeCount; i++) {
@@ -834,7 +845,7 @@ function createFruitMesh(level) {
             bead.castShadow = true;
             const theta = i * goldenAngle;
             const yOffset = (1 - (i / grapeCount)) * (data.radius * 0.9) - data.radius * 0.45;
-            const radiusAtY = data.radius * (0.85 - (i / grapeCount) * 0.42);
+            const radiusAtY = data.radius * (0.95 - (i / grapeCount) * 0.38);
 
             const bx = Math.cos(theta) * radiusAtY;
             const bz = Math.sin(theta) * radiusAtY;
@@ -856,9 +867,9 @@ function createFruitMesh(level) {
     } else if (data.pear) {
         // NÍVEL 6: Pera
         bodyMesh = new THREE.Group();
-        const lower = new THREE.Mesh(new THREE.SphereGeometry(data.radius * 0.95, 28, 24), bodyMat);
-        lower.position.y = -data.radius * 0.15;
-        const upper = new THREE.Mesh(new THREE.SphereGeometry(data.radius * 0.70, 24, 20), bodyMat);
+        const lower = new THREE.Mesh(new THREE.SphereGeometry(data.radius * 0.98, 28, 24), bodyMat);
+        lower.position.y = -data.radius * 0.12;
+        const upper = new THREE.Mesh(new THREE.SphereGeometry(data.radius * 0.78, 24, 20), bodyMat);
         upper.position.y = data.radius * 0.45;
         bodyMesh.add(lower);
         bodyMesh.add(upper);
@@ -1038,17 +1049,17 @@ function createBulbousJar() {
     const jarGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
     jarGeo.translate(0, 0, -depth / 2);
 
-    // Vidro espesso de alto contraste translúcido
+    // Vidro espesso de alto contraste translúcido e cristalino
     const glassMat = new THREE.MeshPhysicalMaterial({
         color: 0xDCF0FF,
         transparent: true,
-        opacity: 0.52,
-        roughness: 0.06,
-        metalness: 0.08,
+        opacity: 0.35,
+        roughness: 0.04,
+        metalness: 0.02,
         clearcoat: 1.0,
-        clearcoatRoughness: 0.04,
-        transmission: 0.75,
-        ior: 1.52,
+        clearcoatRoughness: 0.03,
+        transmission: 0.90,
+        ior: 1.50,
         depthWrite: false
     });
 
@@ -1070,9 +1081,9 @@ function createBulbousJar() {
     const backGlassMat = new THREE.MeshPhysicalMaterial({
         color: 0xC8E6FF,
         transparent: true,
-        opacity: 0.28,
-        roughness: 0.12,
-        metalness: 0.04,
+        opacity: 0.22,
+        roughness: 0.10,
+        metalness: 0.02,
         clearcoat: 0.8,
         depthWrite: false
     });
@@ -1147,20 +1158,7 @@ function createBulbousJar() {
     rimFront.position.z = depth / 2;
     jarMeshGroup.add(rimFront);
 
-    // 5. Cáustica / Tapete pastel suave no fundo
-    const causticGeo = new THREE.PlaneGeometry(W_inner * 1.85, depth * 0.85);
-    const causticMat = new THREE.MeshBasicMaterial({
-        color: 0xFFDCE5,
-        transparent: true,
-        opacity: 0.40,
-        depthWrite: false
-    });
-    const causticMesh = new THREE.Mesh(causticGeo, causticMat);
-    causticMesh.rotation.x = -Math.PI / 2;
-    causticMesh.position.set(0, Y_inner_floor + 0.02, 0);
-    jarMeshGroup.add(causticMesh);
-
-    // 6. Base de Madeira Aconchegante (Suporte retangular robusto e elegante)
+    // 5. Base de Madeira Aconchegante (Suporte retangular robusto e elegante)
     const baseWidth = (W_outer + 0.25) * 2;
     const baseDepth = depth + 0.5;
     const baseHeight = 0.32;
@@ -1359,6 +1357,7 @@ function createDropper() {
     });
     aimingLine = new THREE.Line(geo, mat);
     aimingLine.computeLineDistances();
+    aimingLine.visible = false;
     scene.add(aimingLine);
 
     // 2. Feixe de luz translúcido suave (Light Beam) descendo da fruta
@@ -1372,6 +1371,7 @@ function createDropper() {
     });
     aimingBeam = new THREE.Mesh(beamGeo, beamMat);
     aimingBeam.position.set(0, (DROP_Y + JAR_FLOOR_Y) / 2, -0.05);
+    aimingBeam.visible = false;
     scene.add(aimingBeam);
 
     // 3. Disco indicador de aterrissagem no fundo/topo da pilha
@@ -1386,6 +1386,7 @@ function createDropper() {
     aimingTargetRing = new THREE.Mesh(ringGeo, ringMat);
     aimingTargetRing.rotation.x = Math.PI / 2;
     aimingTargetRing.position.set(0, JAR_FLOOR_Y + 0.05, 0);
+    aimingTargetRing.visible = false;
     scene.add(aimingTargetRing);
 
     dropperMesh = new THREE.Group();
@@ -1412,6 +1413,9 @@ function updateDropperPreview() {
 
 function updateAimTargetRing() {
     if (!aimingTargetRing) return;
+    aimingTargetRing.visible = isAiming;
+    if (!isAiming) return;
+
     let landingY = JAR_FLOOR_Y;
     const curR = FRUITS[currentFruitLevel].radius;
     for (let f of fruits) {
@@ -1462,8 +1466,14 @@ function setupControls() {
         }
 
         if (dropperMesh) dropperMesh.position.x = dropX;
-        if (aimingLine) aimingLine.position.x = dropX;
-        if (aimingBeam) aimingBeam.position.x = dropX;
+        if (aimingLine) {
+            aimingLine.position.x = dropX;
+            aimingLine.visible = true;
+        }
+        if (aimingBeam) {
+            aimingBeam.position.x = dropX;
+            aimingBeam.visible = true;
+        }
         updateAimTargetRing();
     }
 
@@ -1518,6 +1528,10 @@ function setupControls() {
 
 function dropFruit() {
     canDrop = false;
+    isAiming = false;
+    if (aimingLine) aimingLine.visible = false;
+    if (aimingBeam) aimingBeam.visible = false;
+    if (aimingTargetRing) aimingTargetRing.visible = false;
     playDropSound();
     triggerHaptic(18);
 
@@ -1550,7 +1564,7 @@ function spawnFruit(x, y, level, vx = 0, vy = 0, dropGrace = 0) {
         vx,
         vy,
         rotationZ: 0,
-        vRotZ: (Math.random() - 0.5) * 1.2,
+        vRotZ: 0,
         dropGrace: dropGrace > 0 ? dropGrace : (y >= DANGER_Y ? 1.4 : 0),
         group,
         bodyMesh,
@@ -1586,7 +1600,9 @@ function updatePhysics(dt) {
             f.x += f.vx * sdt;
             f.y += f.vy * sdt;
             f.rotationZ += f.vRotZ * sdt;
-            f.vRotZ *= Math.pow(0.95, sdt * 60);
+            f.vRotZ *= Math.pow(0.70, sdt * 60);
+            if (Math.abs(f.vRotZ) < 0.04) f.vRotZ = 0;
+
             f.vx *= airDamping;
             f.vy *= airDamping;
 
@@ -1594,9 +1610,9 @@ function updatePhysics(dt) {
                 f.dropGrace = Math.max(0, f.dropGrace - sdt);
             }
 
-            // Colisão com o Fundo Plano do Pote
-            if (f.y - f.radius < JAR_FLOOR_Y) {
-                f.y = JAR_FLOOR_Y + f.radius;
+            // Colisão com o Fundo Plano do Pote (ajuste fino 0.94 para assentar sem flutuação)
+            if (f.y - f.radius * 0.94 < JAR_FLOOR_Y) {
+                f.y = JAR_FLOOR_Y + f.radius * 0.94;
                 f.dropGrace = 0; // Tocou no chão, graça encerra
                 if (f.vy < 0) {
                     if (Math.abs(f.vy) < 0.7) {
@@ -1606,11 +1622,15 @@ function updatePhysics(dt) {
                     }
                 }
                 f.vx *= floorFriction;
+                f.vRotZ *= 0.65;
+                if (Math.abs(f.vx) < 0.25 && Math.abs(f.vy) < 0.25) {
+                    f.vRotZ = 0;
+                }
             }
 
             // Colisão com a Parede Curva do Pote Gordinho
             // Mantemos a colisão estritamente horizontal para impedir impulsos verticais indesejados
-            const maxR = getJarInnerRadius(f.y) - f.radius;
+            const maxR = getJarInnerRadius(f.y) - f.radius * 0.96;
             if (Math.abs(f.x) > maxR) {
                 const side = Math.sign(f.x);
                 f.x = side * maxR;
@@ -1618,6 +1638,7 @@ function updatePhysics(dt) {
                 if (f.vx * side > 0) {
                     f.vx = -f.vx * 0.12; // Quique amortecido horizontal
                     f.vy *= 0.94;        // Atrito de deslizamento na parede
+                    f.vRotZ *= 0.75;
                     if (Math.abs(f.vx) > 0.8 && step === 0) {
                         playGlassHitSound();
                         f.impactTimer = 0.25;
@@ -1644,7 +1665,8 @@ function updatePhysics(dt) {
                 const dx = b.x - a.x;
                 const dy = b.y - a.y;
                 const distSq = dx * dx + dy * dy;
-                const minDist = a.radius + b.radius;
+                // Tolerância snug (0.94): contato físico direto entre superfícies visuais sem lacuna de ar
+                const minDist = (a.radius + b.radius) * 0.94;
 
                 if (distSq < minDist * minDist && distSq > 1e-7) {
                     // Tocou em outra fruta: fim da graça de queda livre
@@ -1703,9 +1725,11 @@ function updatePhysics(dt) {
                         b.vx += frictionImpulse * (a.mass / totalMass) * tx;
                         b.vy += frictionImpulse * (a.mass / totalMass) * ty;
 
-                        // Troca de giro no atrito
-                        a.vRotZ -= velAlongTangent * 0.08;
-                        b.vRotZ += velAlongTangent * 0.08;
+                        // Amortecimento rotacional no contato (elimina rotação perpétua entre frutas)
+                        a.vRotZ *= 0.80;
+                        b.vRotZ *= 0.80;
+                        if (Math.abs(a.vx) < 0.25 && Math.abs(a.vy) < 0.25) a.vRotZ = 0;
+                        if (Math.abs(b.vx) < 0.25 && Math.abs(b.vy) < 0.25) b.vRotZ = 0;
 
                         // Expressão de impacto em batidas fortes
                         if (velAlongNormal > 2.8 && step === 0) {
