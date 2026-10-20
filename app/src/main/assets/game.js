@@ -47,28 +47,22 @@ function loadFruitModels() {
     });
 }
 
-// --- 2. GEOMETRIA DO POTE GORDINHO (Bulbous Glass Jar) ---
-const JAR_FLOOR_Y = -4.1;
-const JAR_NECK_Y = 2.4;
-const JAR_RIM_Y = 3.2;
-const DANGER_Y = 2.3;
-const DROP_Y = 3.6;
+// --- 2. GEOMETRIA DO POTE RETANGULAR AMPLIADO (Rectangular Glass Tank) ---
+const JAR_FLOOR_Y = -4.3;
+const JAR_RIM_Y = 3.1;
+const DANGER_Y = 2.4;
+const DROP_Y = 3.8;
+const JAR_HALF_WIDTH = 2.95; // Largura interna total = 5.9 (cabe Melancia + Laranja lado a lado!)
+const JAR_CORNER_R = 0.55;  // Cantos inferiores suavemente arredondados
 
-// Função matemática que define o raio interno do pote gordinho em qualquer altura Y
+// Função matemática que define a largura interna permitida em qualquer altura Y
 function getJarInnerRadius(y) {
-    if (y <= JAR_FLOOR_Y) return 2.3;
-    if (y >= JAR_NECK_Y) {
-        // Gargalo levemente afunilado e borda superior
-        if (y > JAR_NECK_Y + 0.5) return 2.25;
-        return 2.15;
+    if (y < JAR_FLOOR_Y + JAR_CORNER_R) {
+        const dy = (JAR_FLOOR_Y + JAR_CORNER_R) - y;
+        const offset = JAR_CORNER_R - Math.sqrt(Math.max(0, JAR_CORNER_R * JAR_CORNER_R - dy * dy));
+        return JAR_HALF_WIDTH - offset;
     }
-    // Interpolação normalizada do fundo até o gargalo (0 a 1)
-    const t = (y - JAR_FLOOR_Y) / (JAR_NECK_Y - JAR_FLOOR_Y);
-    // Curva de sino (barriga gordinha do pote)
-    // t=0 (base) -> 2.3 | t~0.4 (barriga) -> ~3.75 | t=1 (gargalo) -> 2.15
-    const belly = Math.sin(t * Math.PI) * 1.55;
-    const baseLinear = 2.35 * (1 - t) + 2.15 * t;
-    return baseLinear + belly;
+    return JAR_HALF_WIDTH;
 }
 
 // Derivada do perfil para cálculo da normal de colisão na curva
@@ -999,44 +993,61 @@ function createFruitMesh(level) {
     return { group, bodyMesh, faceMesh, initialFace };
 }
 
-// --- 7. CRIAÇÃO DO POTE GORDINHO (3D Lathe Mesh com Alto Contraste e Silhueta) ---
+// --- 7. CRIAÇÃO DO POTE RETANGULAR 3D AMPLIADO (Glass Tank com cantos arredondados) ---
 function createBulbousJar() {
     jarMeshGroup = new THREE.Group();
 
-    // Perfil curvado para LatheGeometry (pote de vidro gordinho)
-    const points = [];
-    const segments = 44;
+    const W_inner = JAR_HALF_WIDTH;
+    const T_wall = 0.16;
+    const W_outer = W_inner + T_wall;
+    const Y_inner_floor = JAR_FLOOR_Y;
+    const Y_floor = JAR_FLOOR_Y - T_wall;
+    const Y_top = JAR_RIM_Y;
+    const R_inner = JAR_CORNER_R;
+    const R_outer = R_inner + T_wall;
+    const depth = 3.6;
 
-    // Fundo plano da base
-    points.push(new THREE.Vector2(0, JAR_FLOOR_Y - 0.2));
-    points.push(new THREE.Vector2(2.5, JAR_FLOOR_Y - 0.2));
-    points.push(new THREE.Vector2(2.65, JAR_FLOOR_Y));
+    // 1. Perfil em 'U' Extrudado com Cantos Arredondados e Chanfro Suave
+    const shape = new THREE.Shape();
+    // Borda externa
+    shape.moveTo(-W_outer, Y_top);
+    shape.lineTo(-W_outer, Y_floor + R_outer);
+    shape.absarc(-W_outer + R_outer, Y_floor + R_outer, R_outer, Math.PI, Math.PI * 1.5, false);
+    shape.lineTo(W_outer - R_outer, Y_floor);
+    shape.absarc(W_outer - R_outer, Y_floor + R_outer, R_outer, Math.PI * 1.5, Math.PI * 2, false);
+    shape.lineTo(W_outer, Y_top);
 
-    // Curva da barriga gordinha subindo até o gargalo
-    for (let i = 0; i <= segments; i++) {
-        const y = JAR_FLOOR_Y + (i / segments) * (JAR_NECK_Y - JAR_FLOOR_Y);
-        const r = getJarInnerRadius(y) + 0.12;
-        points.push(new THREE.Vector2(r, y));
-    }
+    // Borda interna
+    shape.lineTo(W_inner, Y_top);
+    shape.lineTo(W_inner, Y_inner_floor + R_inner);
+    shape.absarc(W_inner - R_inner, Y_inner_floor + R_inner, R_inner, 0, -Math.PI * 0.5, true);
+    shape.lineTo(-W_inner + R_inner, Y_inner_floor);
+    shape.absarc(-W_inner + R_inner, Y_inner_floor + R_inner, R_inner, -Math.PI * 0.5, -Math.PI, true);
+    shape.lineTo(-W_inner, Y_top);
+    shape.closePath();
 
-    // Borda superior e anel do gargalo grosso
-    points.push(new THREE.Vector2(2.35, JAR_NECK_Y + 0.3));
-    points.push(new THREE.Vector2(2.55, JAR_NECK_Y + 0.5));
-    points.push(new THREE.Vector2(2.60, JAR_NECK_Y + 0.7));
-    points.push(new THREE.Vector2(2.35, JAR_NECK_Y + 0.75));
+    const extrudeSettings = {
+        steps: 1,
+        depth: depth,
+        bevelEnabled: true,
+        bevelThickness: 0.05,
+        bevelSize: 0.05,
+        bevelSegments: 2
+    };
 
-    const jarGeo = new THREE.LatheGeometry(points, 52);
+    const jarGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    jarGeo.translate(0, 0, -depth / 2);
 
-    // Vidro espesso de alto contraste: visível com nitidez cristalina em qualquer tela
+    // Vidro espesso de alto contraste translúcido
     const glassMat = new THREE.MeshPhysicalMaterial({
         color: 0xDCF0FF,
         transparent: true,
-        opacity: 0.60,
-        roughness: 0.07,
+        opacity: 0.52,
+        roughness: 0.06,
         metalness: 0.08,
         clearcoat: 1.0,
         clearcoatRoughness: 0.04,
-        transmission: 0.72,
+        transmission: 0.75,
         ior: 1.52,
         depthWrite: false
     });
@@ -1045,69 +1056,122 @@ function createBulbousJar() {
     jarMesh.renderOrder = 2;
     jarMeshGroup.add(jarMesh);
 
-    // Linhas de Silhueta Curva do Pote (Garante visibilidade máxima mesmo em telas claras)
-    const leftPoints = [];
-    const rightPoints = [];
-    for (let i = 0; i <= segments; i++) {
-        const y = JAR_FLOOR_Y + (i / segments) * (JAR_NECK_Y - JAR_FLOOR_Y);
-        const r = getJarInnerRadius(y) + 0.13;
-        leftPoints.push(new THREE.Vector3(-r, y, 0.02));
-        rightPoints.push(new THREE.Vector3(r, y, 0.02));
+    // 2. Painel Traseiro de Vidro (Fundo translúcido do aquário)
+    const backShape = new THREE.Shape();
+    backShape.moveTo(-W_outer, Y_top);
+    backShape.lineTo(-W_outer, Y_floor + R_outer);
+    backShape.absarc(-W_outer + R_outer, Y_floor + R_outer, R_outer, Math.PI, Math.PI * 1.5, false);
+    backShape.lineTo(W_outer - R_outer, Y_floor);
+    backShape.absarc(W_outer - R_outer, Y_floor + R_outer, R_outer, Math.PI * 1.5, Math.PI * 2, false);
+    backShape.lineTo(W_outer, Y_top);
+    backShape.closePath();
+
+    const backGeo = new THREE.ShapeGeometry(backShape);
+    const backGlassMat = new THREE.MeshPhysicalMaterial({
+        color: 0xC8E6FF,
+        transparent: true,
+        opacity: 0.28,
+        roughness: 0.12,
+        metalness: 0.04,
+        clearcoat: 0.8,
+        depthWrite: false
+    });
+    const backMesh = new THREE.Mesh(backGeo, backGlassMat);
+    backMesh.position.z = -depth / 2;
+    jarMeshGroup.add(backMesh);
+
+    // 3. Linhas de Silhueta Frontal Neon (Garante visibilidade máxima e contorno nítido)
+    const borderPoints = [];
+    borderPoints.push(new THREE.Vector3(-W_inner, Y_top, 0.02));
+    borderPoints.push(new THREE.Vector3(-W_inner, Y_inner_floor + R_inner, 0.02));
+
+    const segs = 12;
+    // Canto inferior esquerdo: arco suave descendo da parede até o chão
+    for (let i = 0; i <= segs; i++) {
+        const a = Math.PI + (i / segs) * (Math.PI * 0.5);
+        borderPoints.push(new THREE.Vector3(
+            -W_inner + R_inner + Math.cos(a) * R_inner,
+            Y_inner_floor + R_inner + Math.sin(a) * R_inner,
+            0.02
+        ));
     }
+    // Chão plano horizontal
+    borderPoints.push(new THREE.Vector3(W_inner - R_inner, Y_inner_floor, 0.02));
+    // Canto inferior direito: arco suave subindo do chão até a parede direita
+    for (let i = 0; i <= segs; i++) {
+        const a = (Math.PI * 1.5) + (i / segs) * (Math.PI * 0.5);
+        borderPoints.push(new THREE.Vector3(
+            W_inner - R_inner + Math.cos(a) * R_inner,
+            Y_inner_floor + R_inner + Math.sin(a) * R_inner,
+            0.02
+        ));
+    }
+    borderPoints.push(new THREE.Vector3(W_inner, Y_top, 0.02));
+
     const outlineMat = new THREE.LineBasicMaterial({
         color: 0x90D5FF,
         transparent: true,
         opacity: 0.85,
-        linewidth: 2
+        linewidth: 3
     });
-    const leftLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(leftPoints), outlineMat);
-    const rightLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(rightPoints), outlineMat);
-    jarMeshGroup.add(leftLine);
-    jarMeshGroup.add(rightLine);
+    const outlineLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(borderPoints), outlineMat);
+    jarMeshGroup.add(outlineLine);
 
-    // Anel de reflexo e brilho no gargalo do pote
-    const ringGeo = new THREE.TorusGeometry(2.55, 0.10, 16, 52);
-    const ringMat = new THREE.MeshPhysicalMaterial({
+    // 4. Friso / Anel de acabamento superior nos topos das paredes
+    const rimMat = new THREE.MeshPhysicalMaterial({
         color: 0xFFFFFF,
-        roughness: 0.04,
-        metalness: 0.12,
+        roughness: 0.08,
+        metalness: 0.15,
         clearcoat: 1.0,
-        clearcoatRoughness: 0.04
+        clearcoatRoughness: 0.05
     });
-    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-    ringMesh.rotation.x = Math.PI / 2;
-    ringMesh.position.y = JAR_NECK_Y + 0.65;
-    jarMeshGroup.add(ringMesh);
 
-    // Borda inferior de suporte
-    const baseRingGeo = new THREE.TorusGeometry(2.55, 0.08, 14, 48);
-    const baseRing = new THREE.Mesh(baseRingGeo, ringMat);
-    baseRing.rotation.x = Math.PI / 2;
-    baseRing.position.y = JAR_FLOOR_Y;
-    jarMeshGroup.add(baseRing);
+    const rimRadius = 0.05;
+    const rimLeftGeo = new THREE.CylinderGeometry(rimRadius, rimRadius, depth, 16);
+    const rimLeft = new THREE.Mesh(rimLeftGeo, rimMat);
+    rimLeft.rotation.x = Math.PI / 2;
+    rimLeft.position.set(-W_inner - T_wall / 2, Y_top + 0.02, 0);
+    jarMeshGroup.add(rimLeft);
 
-    // Cáustica interna suave no fundo de vidro
-    const causticGeo = new THREE.CircleGeometry(2.32, 36);
+    const rimRight = rimLeft.clone();
+    rimRight.position.x = W_inner + T_wall / 2;
+    jarMeshGroup.add(rimRight);
+
+    const rimBackGeo = new THREE.CylinderGeometry(rimRadius, rimRadius, (W_outer * 2), 16);
+    const rimBack = new THREE.Mesh(rimBackGeo, rimMat);
+    rimBack.rotation.z = Math.PI / 2;
+    rimBack.position.set(0, Y_top + 0.02, -depth / 2);
+    jarMeshGroup.add(rimBack);
+
+    const rimFront = rimBack.clone();
+    rimFront.position.z = depth / 2;
+    jarMeshGroup.add(rimFront);
+
+    // 5. Cáustica / Tapete pastel suave no fundo
+    const causticGeo = new THREE.PlaneGeometry(W_inner * 1.85, depth * 0.85);
     const causticMat = new THREE.MeshBasicMaterial({
         color: 0xFFDCE5,
         transparent: true,
-        opacity: 0.48,
+        opacity: 0.40,
         depthWrite: false
     });
     const causticMesh = new THREE.Mesh(causticGeo, causticMat);
     causticMesh.rotation.x = -Math.PI / 2;
-    causticMesh.position.y = JAR_FLOOR_Y + 0.02;
+    causticMesh.position.set(0, Y_inner_floor + 0.02, 0);
     jarMeshGroup.add(causticMesh);
 
-    // Base de Madeira Aconchegante (Suporte redondo proporcional ao pote)
-    const tableGeo = new THREE.CylinderGeometry(3.4, 3.65, 0.38, 48);
+    // 6. Base de Madeira Aconchegante (Suporte retangular robusto e elegante)
+    const baseWidth = (W_outer + 0.25) * 2;
+    const baseDepth = depth + 0.5;
+    const baseHeight = 0.32;
+    const tableGeo = new THREE.BoxGeometry(baseWidth, baseHeight, baseDepth);
     const tableMat = new THREE.MeshStandardMaterial({
-        color: 0xD4A373,
+        color: 0xC89565,
         roughness: 0.45,
         metalness: 0.04
     });
     const tableMesh = new THREE.Mesh(tableGeo, tableMat);
-    tableMesh.position.y = JAR_FLOOR_Y - 0.25;
+    tableMesh.position.set(0, Y_floor - baseHeight / 2 - 0.01, 0);
     tableMesh.receiveShadow = true;
     jarMeshGroup.add(tableMesh);
 
@@ -1173,10 +1237,10 @@ function updateCameraResponsive() {
     camera.aspect = aspect;
 
     // Área do jogo que deve caber 100% visível na tela sem nenhum corte:
-    // - Largura: barriga do pote (raio ~3.9, largura 7.8) + mesa (~8.1) + margem confortável
-    // - Altura: base da mesa (Y = -4.55) até fruta suspensa no topo (Y = +4.5), total ~9.1 + margem
-    const TARGET_WIDTH = 8.6;   // Margem limpa nas laterais em qualquer celular
-    const TARGET_HEIGHT = 10.5; // Margem limpa entre o topo do pote e o HUD superior
+    // - Largura: pote retangular (largura 5.9) + base de madeira (6.8) + margem confortável
+    // - Altura: base de madeira (Y = -4.75) até fruta suspensa no topo (Y = +4.5), total ~9.3 + margem
+    const TARGET_WIDTH = 7.6;   // Margem limpa nas laterais em qualquer celular
+    const TARGET_HEIGHT = 10.6; // Margem limpa entre o topo do pote e o HUD superior
 
     const baseFov = 44;
     const tanHalfFov = Math.tan((baseFov * 0.5) * Math.PI / 180);
@@ -1188,8 +1252,8 @@ function updateCameraResponsive() {
     camera.position.z = targetZ;
 
     // Ponto focal perfeitamente balanceado entre o HUD do topo e a barra inferior
-    const targetCenterY = -0.48;
-    camera.position.y = targetCenterY + (targetZ * 0.040);
+    const targetCenterY = -0.58;
+    camera.position.y = targetCenterY + (targetZ * 0.038);
     camera.position.x = 0;
     camera.lookAt(0, targetCenterY, 0);
 
@@ -1262,8 +1326,8 @@ function initScene() {
 function createDangerLine() {
     const r = getJarInnerRadius(DANGER_Y);
     const points = [
-        new THREE.Vector3(-r * 0.95, DANGER_Y, 0),
-        new THREE.Vector3(r * 0.95, DANGER_Y, 0)
+        new THREE.Vector3(-r * 0.98, DANGER_Y, 0),
+        new THREE.Vector3(r * 0.98, DANGER_Y, 0)
     ];
     const geo = new THREE.BufferGeometry().setFromPoints(points);
     const mat = new THREE.LineDashedMaterial({
