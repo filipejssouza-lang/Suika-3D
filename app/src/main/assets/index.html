@@ -250,6 +250,33 @@
             100% { transform: translateX(-50%) scale(1.04); }
         }
 
+        /* Badge de Alerta de Perigo / Transbordamento */
+        #danger-badge {
+            position: absolute;
+            top: 78px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #FF1744, #D50000);
+            color: #FFF;
+            padding: 6px 18px;
+            border-radius: 22px;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            box-shadow: 0 6px 20px rgba(255, 23, 68, 0.55);
+            border: 2px solid #FFF;
+            display: none;
+            z-index: 35;
+            animation: dangerThrob 0.45s infinite alternate;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        @keyframes dangerThrob {
+            0% { transform: translateX(-50%) scale(0.96); box-shadow: 0 4px 12px rgba(255, 23, 68, 0.4); }
+            100% { transform: translateX(-50%) scale(1.06); box-shadow: 0 8px 24px rgba(255, 23, 68, 0.85); }
+        }
+
         /* Floating Score Popups */
         #popups-layer {
             position: absolute;
@@ -470,6 +497,9 @@
 
     <!-- Banner Informativo do Martelo -->
     <div id="hammer-banner">🔨 Toque em uma fruta para destruí-la!</div>
+
+    <!-- Alerta de Linha de Perigo (Game Over Countdown) -->
+    <div id="danger-badge">⚠️ TRANSBORDANDO! <span id="danger-countdown">2.5s</span></div>
 
     <!-- Camada de Popups de Pontos e Combos -->
     <div id="popups-layer"></div>

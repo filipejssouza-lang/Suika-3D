@@ -1457,7 +1457,7 @@ function dropFruit() {
     playDropSound();
     triggerHaptic(18);
 
-    lastSpawnedFruit = spawnFruit(dropX, DROP_Y, currentFruitLevel, 0, -1.2);
+    lastSpawnedFruit = spawnFruit(dropX, DROP_Y, currentFruitLevel, 0, -1.2, 1.4);
     updatePowerupUI();
 
     setTimeout(() => {
@@ -1470,8 +1470,7 @@ function dropFruit() {
 }
 
 // --- 10. SIMULAÇÃO FÍSICA NO POTE GORDINHO ---
-// --- 10. SIMULAÇÃO FÍSICA NO POTE GORDINHO ---
-function spawnFruit(x, y, level, vx = 0, vy = 0) {
+function spawnFruit(x, y, level, vx = 0, vy = 0, dropGrace = 0) {
     const data = FRUITS[level];
     const { group, bodyMesh, faceMesh, initialFace } = createFruitMesh(level);
     group.position.set(x, y, 0);
@@ -1487,7 +1486,8 @@ function spawnFruit(x, y, level, vx = 0, vy = 0) {
         vx,
         vy,
         rotationZ: 0,
-        vRotZ: (Math.random() - 0.5) * 1.6,
+        vRotZ: (Math.random() - 0.5) * 1.2,
+        dropGrace: dropGrace > 0 ? dropGrace : (y >= DANGER_Y ? 1.4 : 0),
         group,
         bodyMesh,
         faceMesh,
@@ -1504,110 +1504,159 @@ function spawnFruit(x, y, level, vx = 0, vy = 0) {
 }
 
 function updatePhysics(dt) {
-    const gravity = -16.5;
-    const restitution = 0.28; // Quique fofo e gostoso
-    const friction = 0.95;
+    // Limita delta time para evitar saltos quânticos em travamentos de frame
+    const clampedDt = Math.min(dt, 0.033);
+    const subSteps = 4;
+    const sdt = clampedDt / subSteps;
+    const gravity = -17.0;
+    const floorFriction = 0.94;
+    const airDamping = Math.pow(0.985, sdt * 60);
 
-    // 1. Integração de Movimento e Colisão com as Paredes Curvas do Pote
-    for (let f of fruits) {
-        if (f.merged) continue;
+    for (let step = 0; step < subSteps; step++) {
+        // 1. Integrar movimento, gravidade, amortecimento e limites do pote
+        for (let i = 0; i < fruits.length; i++) {
+            const f = fruits[i];
+            if (f.merged) continue;
 
-        f.vy += gravity * dt;
-        f.x += f.vx * dt;
-        f.y += f.vy * dt;
-        f.rotationZ += f.vRotZ * dt;
-        f.vRotZ *= 0.97;
+            f.vy += gravity * sdt;
+            f.x += f.vx * sdt;
+            f.y += f.vy * sdt;
+            f.rotationZ += f.vRotZ * sdt;
+            f.vRotZ *= Math.pow(0.95, sdt * 60);
+            f.vx *= airDamping;
+            f.vy *= airDamping;
 
-        // Colisão com o Fundo Plano do Pote
-        if (f.y - f.radius < JAR_FLOOR_Y) {
-            f.y = JAR_FLOOR_Y + f.radius;
-            f.vy = -f.vy * restitution;
-            f.vx *= friction;
-            if (Math.abs(f.vy) < 0.2) f.vy = 0;
+            if (f.dropGrace > 0) {
+                f.dropGrace = Math.max(0, f.dropGrace - sdt);
+            }
+
+            // Colisão com o Fundo Plano do Pote
+            if (f.y - f.radius < JAR_FLOOR_Y) {
+                f.y = JAR_FLOOR_Y + f.radius;
+                f.dropGrace = 0; // Tocou no chão, graça encerra
+                if (f.vy < 0) {
+                    if (Math.abs(f.vy) < 0.7) {
+                        f.vy = 0; // Repouso inelástico - para de quicar e assenta
+                    } else {
+                        f.vy = -f.vy * 0.12; // Quique suave e amortecido
+                    }
+                }
+                f.vx *= floorFriction;
+            }
+
+            // Colisão com a Parede Curva do Pote Gordinho
+            // Mantemos a colisão estritamente horizontal para impedir impulsos verticais indesejados
+            const maxR = getJarInnerRadius(f.y) - f.radius;
+            if (Math.abs(f.x) > maxR) {
+                const side = Math.sign(f.x);
+                f.x = side * maxR;
+
+                if (f.vx * side > 0) {
+                    f.vx = -f.vx * 0.12; // Quique amortecido horizontal
+                    f.vy *= 0.94;        // Atrito de deslizamento na parede
+                    if (Math.abs(f.vx) > 0.8 && step === 0) {
+                        playGlassHitSound();
+                        f.impactTimer = 0.25;
+                        f.currentFace = 'impact';
+                    }
+                }
+            }
+
+            // Teto / Limite de Segurança Superior (impede frutas de voarem para fora da tela)
+            const ceilingY = DROP_Y + 0.35;
+            if (f.y + f.radius > ceilingY) {
+                f.y = ceilingY - f.radius;
+                if (f.vy > 0) f.vy = 0;
+            }
         }
 
-        // Colisão com a Parede Curva do Pote Gordinho
-        const maxR = getJarInnerRadius(f.y) - f.radius;
-        if (Math.abs(f.x) > maxR) {
-            const side = Math.sign(f.x);
-            f.x = side * maxR;
+        // 2. Colisão Círculo-Círculo & Fusão
+        for (let i = 0; i < fruits.length; i++) {
+            for (let j = i + 1; j < fruits.length; j++) {
+                const a = fruits[i];
+                const b = fruits[j];
+                if (a.merged || b.merged) continue;
 
-            // Normal da superfície inclinada da parede
-            const slope = getJarSlope(f.y);
-            const nx = -side;
-            const ny = side * slope;
-            const len = Math.sqrt(nx * nx + ny * ny) || 1;
-            const normX = nx / len;
-            const normY = ny / len;
+                const dx = b.x - a.x;
+                const dy = b.y - a.y;
+                const distSq = dx * dx + dy * dy;
+                const minDist = a.radius + b.radius;
 
-            // Reflexão de velocidade contra a normal inclinada
-            const dot = f.vx * normX + f.vy * normY;
-            if (dot < 0) {
-                f.vx -= (1 + restitution) * dot * normX;
-                f.vy -= (1 + restitution) * dot * normY;
-                f.vx *= friction;
-                f.vy *= friction;
-                if (Math.abs(dot) > 1.5) {
-                    playGlassHitSound();
-                    f.impactTimer = 0.32;
-                    f.currentFace = 'impact';
+                if (distSq < minDist * minDist && distSq > 1e-7) {
+                    // Tocou em outra fruta: fim da graça de queda livre
+                    a.dropGrace = 0;
+                    b.dropGrace = 0;
+
+                    // Fusão de frutas do mesmo nível
+                    if (a.level === b.level && a.level < FRUITS.length - 1) {
+                        mergeFruits(a, b);
+                        continue;
+                    }
+
+                    const dist = Math.sqrt(distSq);
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    const overlap = minDist - dist;
+
+                    const totalMass = a.mass + b.mass;
+
+                    // Separação posicional suave (Baumgarte com slop anti-jitter)
+                    const slop = 0.002;
+                    const resolveAmount = Math.max(0, overlap - slop) * 0.75;
+                    const moveA = resolveAmount * (b.mass / totalMass);
+                    const moveB = resolveAmount * (a.mass / totalMass);
+
+                    a.x -= nx * moveA;
+                    a.y -= ny * moveA;
+                    b.x += nx * moveB;
+                    b.y += ny * moveB;
+
+                    // Velocidade relativa ao longo da normal
+                    const rvx = a.vx - b.vx;
+                    const rvy = a.vy - b.vy;
+                    const velAlongNormal = rvx * nx + rvy * ny;
+
+                    // GUARD ESSENCIAL: Se estiverem se afastando (velAlongNormal <= 0),
+                    // NUNCA aplicar impulso de atração!
+                    if (velAlongNormal > 0) {
+                        // Restituição inelástica para repouso (elimina tremedeira)
+                        const restitution = velAlongNormal > 0.85 ? 0.12 : 0.0;
+                        const impulse = ((1 + restitution) * velAlongNormal) / totalMass;
+
+                        a.vx -= impulse * b.mass * nx;
+                        a.vy -= impulse * b.mass * ny;
+                        b.vx += impulse * a.mass * nx;
+                        b.vy += impulse * a.mass * ny;
+
+                        // Atrito tangencial (impede deslizamento descontrolado)
+                        const tx = -ny;
+                        const ty = nx;
+                        const velAlongTangent = rvx * tx + rvy * ty;
+                        const frictionImpulse = velAlongTangent * 0.18;
+
+                        a.vx -= frictionImpulse * (b.mass / totalMass) * tx;
+                        a.vy -= frictionImpulse * (b.mass / totalMass) * ty;
+                        b.vx += frictionImpulse * (a.mass / totalMass) * tx;
+                        b.vy += frictionImpulse * (a.mass / totalMass) * ty;
+
+                        // Troca de giro no atrito
+                        a.vRotZ -= velAlongTangent * 0.08;
+                        b.vRotZ += velAlongTangent * 0.08;
+
+                        // Expressão de impacto em batidas fortes
+                        if (velAlongNormal > 2.8 && step === 0) {
+                            a.impactTimer = 0.24;
+                            b.impactTimer = 0.24;
+                            a.currentFace = 'impact';
+                            b.currentFace = 'impact';
+                        }
+                    }
                 }
             }
         }
     }
 
-    // 2. Colisão Círculo-Círculo & Fusão
-    for (let i = 0; i < fruits.length; i++) {
-        for (let j = i + 1; j < fruits.length; j++) {
-            const a = fruits[i];
-            const b = fruits[j];
-            if (a.merged || b.merged) continue;
-
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const minDist = a.radius + b.radius;
-
-            if (dist < minDist && dist > 0.0001) {
-                // Fusão de frutas do mesmo nível
-                if (a.level === b.level && a.level < FRUITS.length - 1) {
-                    mergeFruits(a, b);
-                    continue;
-                }
-
-                // Resolução elástica de colisão
-                const nx = dx / dist;
-                const ny = dy / dist;
-                const overlap = minDist - dist;
-
-                const totalMass = a.mass + b.mass;
-                a.x -= nx * overlap * (b.mass / totalMass);
-                a.y -= ny * overlap * (b.mass / totalMass);
-                b.x += nx * overlap * (a.mass / totalMass);
-                b.y += ny * overlap * (a.mass / totalMass);
-
-                const kx = a.vx - b.vx;
-                const ky = a.vy - b.vy;
-                const p = 2 * (nx * kx + ny * ky) / totalMass;
-
-                a.vx -= p * b.mass * nx * (1 + restitution);
-                a.vy -= p * b.mass * ny * (1 + restitution);
-                b.vx += p * a.mass * nx * (1 + restitution);
-                b.vy += p * a.mass * ny * (1 + restitution);
-
-                // Expressão de impacto em batidas fortes
-                const impactVel = Math.abs(kx) + Math.abs(ky);
-                if (impactVel > 3.2) {
-                    a.impactTimer = 0.28;
-                    b.impactTimer = 0.28;
-                    a.currentFace = 'impact';
-                    b.currentFace = 'impact';
-                }
-            }
-        }
-    }
-
-    // 3. Atualização das Posições, Rotação e Rostinhos Dinâmicos
+    // 3. Atualização das Posições Visuais, Rotação e Rostinhos Dinâmicos
     for (let f of fruits) {
         if (f.merged) continue;
         f.group.position.set(f.x, f.y, 0);
@@ -1691,7 +1740,7 @@ function mergeFruits(a, b) {
     spawnMergeJuice(midX, midY, FRUITS[nextLevel].color, nextLevel);
 
     // Instancia a nova fruta maior
-    const newFruit = spawnFruit(midX, midY, nextLevel, 0, 0.65);
+    const newFruit = spawnFruit(midX, midY, nextLevel, 0, 0.2, 0.2);
 
     // Efeito elástico elástico suculento "Squash & Stretch"
     newFruit.group.scale.set(1.35, 0.78, 1.25);
@@ -2079,18 +2128,25 @@ function checkDangerDeadline(dt) {
 
     let hasFruitInDanger = false;
     for (let f of fruits) {
-        if (f.y + f.radius > DANGER_Y && Math.abs(f.vy) < 0.6) {
+        if (f.merged) continue;
+        const fruitTop = f.y + f.radius;
+        // Se a fruta já assentou / encerrou tempo de drop e o topo ultrapassa a linha de perigo
+        // (desconsidera apenas quedas rápidas vy < -1.5)
+        if (f.dropGrace <= 0 && fruitTop > DANGER_Y && f.vy > -1.5) {
             hasFruitInDanger = true;
             break;
         }
     }
 
+    const dangerBadge = document.getElementById('danger-badge');
+    const dangerCountdown = document.getElementById('danger-countdown');
+
     // Reatividade visual da linha de perigo: pulsa neon carmesim em situação de perigo
     if (dangerLineMesh && dangerLineMesh.material) {
         if (hasFruitInDanger) {
-            const pulse = 0.5 + Math.sin(performance.now() * 0.012) * 0.5;
+            const pulse = 0.5 + Math.sin(performance.now() * 0.015) * 0.5;
             dangerLineMesh.material.color.setHex(0xFF0055);
-            dangerLineMesh.material.opacity = 0.65 + pulse * 0.35;
+            dangerLineMesh.material.opacity = 0.85 + pulse * 0.15;
         } else {
             dangerLineMesh.material.color.setHex(0xFF5D8F);
             dangerLineMesh.material.opacity = 0.55;
@@ -2099,16 +2155,39 @@ function checkDangerDeadline(dt) {
 
     if (hasFruitInDanger) {
         dangerTimer += dt;
-        if (dangerTimer > 2.8) {
+        const timeLeft = Math.max(0, 2.5 - dangerTimer).toFixed(1);
+
+        if (dangerBadge && dangerCountdown) {
+            dangerBadge.style.display = 'block';
+            dangerCountdown.textContent = `${timeLeft}s`;
+        }
+
+        // Feedback tátil pulsante suave
+        if (Math.floor(dangerTimer * 10) % 6 === 0) {
+            triggerHaptic(20);
+        }
+
+        if (dangerTimer >= 2.5) {
+            if (dangerBadge) dangerBadge.style.display = 'none';
             triggerGameOver();
         }
     } else {
-        dangerTimer = Math.max(0, dangerTimer - dt * 2);
+        if (dangerTimer > 0) {
+            dangerTimer = Math.max(0, dangerTimer - dt * 1.5);
+            if (dangerTimer === 0 && dangerBadge) {
+                dangerBadge.style.display = 'none';
+            }
+        } else if (dangerBadge) {
+            dangerBadge.style.display = 'none';
+        }
     }
 }
 
 function triggerGameOver() {
     isGameOver = true;
+    const dangerBadge = document.getElementById('danger-badge');
+    if (dangerBadge) dangerBadge.style.display = 'none';
+
     triggerHaptic(120);
     document.getElementById('final-score').textContent = score;
     document.getElementById('final-best').textContent = `Recorde: ${bestScore}`;
@@ -2118,6 +2197,9 @@ function triggerGameOver() {
 function reviveGame() {
     // Revive removendo as 3 frutas mais altas (ótimo hook para Rewarded Ad)
     document.getElementById('gameover-modal').style.display = 'none';
+    const dangerBadge = document.getElementById('danger-badge');
+    if (dangerBadge) dangerBadge.style.display = 'none';
+
     fruits.sort((a, b) => b.y - a.y);
     const toRemove = fruits.slice(0, 3);
 
@@ -2156,6 +2238,9 @@ function restartGame() {
     undoCount = 1;
     lastSpawnedFruit = null;
     updatePowerupUI();
+
+    const dangerBadge = document.getElementById('danger-badge');
+    if (dangerBadge) dangerBadge.style.display = 'none';
 
     document.getElementById('score-val').textContent = '0';
     document.getElementById('gameover-modal').style.display = 'none';
