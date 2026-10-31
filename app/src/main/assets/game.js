@@ -5,19 +5,19 @@
 
 // --- 1. CONFIGURAÇÃO DAS FRUTAS (13 Níveis: Cereja até Rei Melancia Dourada) ---
 const FRUITS = [
-    { level: 0,  name: 'Cereja',                emoji: '🍒', radius: 0.32, color: 0xFF1744, points: 2,    stem: true,     model: 'models/cherry.glb'     },
-    { level: 1,  name: 'Morango',               emoji: '🍓', radius: 0.42, color: 0xFF2A6D, points: 4,    seeds: true,    model: 'models/strawberry.glb' },
-    { level: 2,  name: 'Uva',                   emoji: '🍇', radius: 0.54, color: 0x7B2CBF, points: 8,    grape: true,    model: 'models/grape.glb'      },
-    { level: 3,  name: 'Tangerina',             emoji: '🍊', radius: 0.68, color: 0xFF8500, points: 16,   stem: true,     model: 'models/dekopon.glb'    },
-    { level: 4,  name: 'Laranja',               emoji: '🍋', radius: 0.82, color: 0xFFB703, points: 32,   citrus: true,   model: 'models/persimmon.glb'  },
-    { level: 5,  name: 'Maçã',                  emoji: '🍎', radius: 0.98, color: 0xD90429, points: 64,   apple: true,    model: 'models/apple.glb'      },
-    { level: 6,  name: 'Pera',                  emoji: '🍐', radius: 1.15, color: 0x90BE6D, points: 128,  pear: true,     model: 'models/pear.glb'       },
-    { level: 7,  name: 'Pêssego',               emoji: '🍑', radius: 1.34, color: 0xFFAFCC, points: 256,  peach: true,    model: 'models/peach.glb'      },
-    { level: 8,  name: 'Abacaxi',               emoji: '🍍', radius: 1.55, color: 0xE0A96D, points: 512,  pine: true,     model: 'models/pineapple.glb'  },
-    { level: 9,  name: 'Melão',                 emoji: '🍈', radius: 1.78, color: 0x52B788, points: 1024, melon: true,    model: 'models/melon.glb'      },
-    { level: 10, name: 'Melancia',              emoji: '🍉', radius: 2.05, color: 0x2D6A4F, points: 2048, wm: true,       model: 'models/watermelon.glb' },
-    { level: 11, name: 'Pitaya',                emoji: '🌸', radius: 2.22, color: 0xFF007F, points: 4096, pitaya: true,   model: 'models/pitaya.glb'     },
-    { level: 12, name: 'Rei Melancia Dourada',  emoji: '👑', radius: 2.38, color: 0xFFD700, points: 8192, goldenWm: true, model: 'models/golden_watermelon.glb' }
+    { level: 0,  name: 'Cereja',                emoji: '🍒', radius: 0.32, color: 0xFF1744, points: 2,    stem: true,     model: 'models/cherry.glb',            modelScale: 0.93 },
+    { level: 1,  name: 'Morango',               emoji: '🍓', radius: 0.42, color: 0xFF2A6D, points: 4,    seeds: true,    model: 'models/strawberry.glb',        modelScale: 0.97 },
+    { level: 2,  name: 'Uva',                   emoji: '🍇', radius: 0.54, color: 0x7B2CBF, points: 8,    grape: true,    model: 'models/grape.glb',             modelScale: 1.14 },
+    { level: 3,  name: 'Tangerina',             emoji: '🍊', radius: 0.68, color: 0xFF8500, points: 16,   stem: true,     model: 'models/dekopon.glb',           modelScale: 1.10 },
+    { level: 4,  name: 'Laranja',               emoji: '🍋', radius: 0.82, color: 0xFFB703, points: 32,   citrus: true,   model: 'models/persimmon.glb',         modelScale: 1.01 },
+    { level: 5,  name: 'Maçã',                  emoji: '🍎', radius: 0.98, color: 0xD90429, points: 64,   apple: true,    model: 'models/apple.glb',             modelScale: 1.08 },
+    { level: 6,  name: 'Pera',                  emoji: '🍐', radius: 1.15, color: 0x90BE6D, points: 128,  pear: true,     model: 'models/pear.glb',              modelScale: 1.03 },
+    { level: 7,  name: 'Pêssego',               emoji: '🍑', radius: 1.34, color: 0xFFAFCC, points: 256,  peach: true,    model: 'models/peach.glb',             modelScale: 1.10 },
+    { level: 8,  name: 'Abacaxi',               emoji: '🍍', radius: 1.55, color: 0xE0A96D, points: 512,  pine: true,     model: 'models/pineapple.glb',         modelScale: 1.04 },
+    { level: 9,  name: 'Melão',                 emoji: '🍈', radius: 1.78, color: 0x52B788, points: 1024, melon: true,    model: 'models/melon.glb',             modelScale: 1.05 },
+    { level: 10, name: 'Melancia',              emoji: '🍉', radius: 2.05, color: 0x2D6A4F, points: 2048, wm: true,       model: 'models/watermelon.glb',        modelScale: 1.03 },
+    { level: 11, name: 'Pitaya',                emoji: '🌸', radius: 2.22, color: 0xFF007F, points: 4096, pitaya: true,   model: 'models/pitaya.glb',            modelScale: 1.06 },
+    { level: 12, name: 'Rei Melancia Dourada',  emoji: '👑', radius: 2.38, color: 0xFFD700, points: 8192, goldenWm: true, model: 'models/golden_watermelon.glb', modelScale: 1.04 }
 ];
 
 const fruitModels = {};
@@ -38,15 +38,14 @@ function loadFruitModels() {
                 }
             });
 
-            // Normaliza a escala visual do modelo para bater exatamente com o raio de colisão (elimina lacunas de ar!)
+            // Normaliza a escala visual com base no raio horizontal do corpo da fruta
+            // (evita usar a altura do talo/coroa que encolhia drasticamente o corpo e gerava vácuo!)
             const bbox = new THREE.Box3().setFromObject(root);
             const size = new THREE.Vector3();
             bbox.getSize(size);
-            const modelRadius = Math.max(size.x, size.y, size.z) / 2;
-            if (modelRadius > 0.001) {
-                const targetScale = (f.radius * 0.98) / modelRadius;
-                root.scale.set(targetScale, targetScale, targetScale);
-            }
+            const horizRadius = Math.max(size.x, size.z) / 2;
+            const targetScale = f.modelScale ? f.modelScale : (horizRadius > 0.001 ? (f.radius * 0.99) / horizRadius : 1.0);
+            root.scale.set(targetScale, targetScale, targetScale);
 
             fruitModels[f.level] = root;
             if (currentFruitLevel === f.level && dropperMesh) {
@@ -797,16 +796,16 @@ function createFruitMesh(level) {
     if (level === 0) {
         // NÍVEL 0: Cerejinhas Gêmeas (Twin Cherries) conectadas por talo duplo
         bodyMesh = new THREE.Group();
-        const singleR = data.radius * 0.78;
+        const singleR = data.radius * 0.86;
         const cherryGeo = new THREE.SphereGeometry(singleR, 24, 20);
 
         const leftCherry = new THREE.Mesh(cherryGeo, bodyMat);
-        leftCherry.position.set(-singleR * 0.65, -singleR * 0.15, 0);
+        leftCherry.position.set(-singleR * 0.48, -singleR * 0.08, 0);
         leftCherry.castShadow = true;
         bodyMesh.add(leftCherry);
 
         const rightCherry = new THREE.Mesh(cherryGeo, bodyMat);
-        rightCherry.position.set(singleR * 0.65, -singleR * 0.05, 0);
+        rightCherry.position.set(singleR * 0.48, 0, 0);
         rightCherry.castShadow = true;
         bodyMesh.add(rightCherry);
 
@@ -814,13 +813,13 @@ function createFruitMesh(level) {
         const stemGeo = new THREE.CylinderGeometry(data.radius * 0.04, data.radius * 0.035, data.radius * 0.95, 6);
 
         const leftStem = new THREE.Mesh(stemGeo, stemMat);
-        leftStem.position.set(-singleR * 0.36, data.radius * 0.45, 0);
-        leftStem.rotation.z = -0.38;
+        leftStem.position.set(-singleR * 0.30, data.radius * 0.45, 0);
+        leftStem.rotation.z = -0.35;
         bodyMesh.add(leftStem);
 
         const rightStem = new THREE.Mesh(stemGeo, stemMat);
-        rightStem.position.set(singleR * 0.36, data.radius * 0.48, 0);
-        rightStem.rotation.z = 0.38;
+        rightStem.position.set(singleR * 0.30, data.radius * 0.48, 0);
+        rightStem.rotation.z = 0.35;
         bodyMesh.add(rightStem);
 
         const leafGeo = new THREE.SphereGeometry(data.radius * 0.18, 10, 6);
@@ -830,26 +829,28 @@ function createFruitMesh(level) {
         leaf.rotation.z = 0.4;
         bodyMesh.add(leaf);
     } else if (data.grape) {
-        // NÍVEL 2: Cacho de Uvas Orgânico com Espiral Dourada
+        // NÍVEL 2: Cacho de Uvas Orgânico Pleno (sem vãos invisíveis)
         bodyMesh = new THREE.Group();
         const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-        const grapeCount = 14;
-        const beadRadius = data.radius * 0.36;
+        const grapeCount = 16;
+        const beadRadius = data.radius * 0.38;
         const beadGeo = new THREE.SphereGeometry(beadRadius, 16, 12);
 
-        const centerMesh = new THREE.Mesh(new THREE.SphereGeometry(data.radius * 0.72, 18, 14), bodyMat);
+        // Núcleo central arredondado que preenche o interior físico
+        const centerMesh = new THREE.Mesh(new THREE.SphereGeometry(data.radius * 0.82, 20, 16), bodyMat);
         bodyMesh.add(centerMesh);
 
         for (let i = 0; i < grapeCount; i++) {
             const bead = new THREE.Mesh(beadGeo, bodyMat);
             bead.castShadow = true;
             const theta = i * goldenAngle;
-            const yOffset = (1 - (i / grapeCount)) * (data.radius * 0.9) - data.radius * 0.45;
-            const radiusAtY = data.radius * (0.95 - (i / grapeCount) * 0.38);
+            const progress = i / grapeCount;
+            const yOffset = (1 - progress) * (data.radius * 0.95) - data.radius * 0.48;
+            const radiusAtY = data.radius * (0.80 - progress * 0.22);
 
             const bx = Math.cos(theta) * radiusAtY;
             const bz = Math.sin(theta) * radiusAtY;
-            bead.position.set(bx, yOffset, bz * 0.85);
+            bead.position.set(bx, yOffset, bz * 0.9);
             bodyMesh.add(bead);
         }
 
@@ -1535,7 +1536,7 @@ function dropFruit() {
     playDropSound();
     triggerHaptic(18);
 
-    lastSpawnedFruit = spawnFruit(dropX, DROP_Y, currentFruitLevel, 0, -1.2, 1.4);
+    lastSpawnedFruit = spawnFruit(dropX, DROP_Y, currentFruitLevel, 0, -5.2, 1.2);
     updatePowerupUI();
 
     setTimeout(() => {
@@ -1544,7 +1545,7 @@ function dropFruit() {
         updateNextFruitUI();
         updateDropperPreview();
         canDrop = true;
-    }, 420);
+    }, 360);
 }
 
 // --- 10. SIMULAÇÃO FÍSICA NO POTE GORDINHO ---
@@ -1584,11 +1585,11 @@ function spawnFruit(x, y, level, vx = 0, vy = 0, dropGrace = 0) {
 function updatePhysics(dt) {
     // Limita delta time para evitar saltos quânticos em travamentos de frame
     const clampedDt = Math.min(dt, 0.033);
-    const subSteps = 4;
+    const subSteps = 6;
     const sdt = clampedDt / subSteps;
-    const gravity = -17.0;
-    const floorFriction = 0.94;
-    const airDamping = Math.pow(0.985, sdt * 60);
+    const gravity = -36.0;
+    const floorFriction = Math.pow(0.965, sdt * 60);
+    const airDamping = Math.pow(0.996, sdt * 60);
 
     for (let step = 0; step < subSteps; step++) {
         // 1. Integrar movimento, gravidade, amortecimento e limites do pote
@@ -1610,34 +1611,34 @@ function updatePhysics(dt) {
                 f.dropGrace = Math.max(0, f.dropGrace - sdt);
             }
 
-            // Colisão com o Fundo Plano do Pote (ajuste fino 0.94 para assentar sem flutuação)
-            if (f.y - f.radius * 0.94 < JAR_FLOOR_Y) {
-                f.y = JAR_FLOOR_Y + f.radius * 0.94;
+            // Colisão com o Fundo Plano do Pote (ajuste 0.95 para assentar rente ao vidro)
+            const floorContactY = JAR_FLOOR_Y + f.radius * 0.95;
+            if (f.y < floorContactY) {
+                f.y = floorContactY;
                 f.dropGrace = 0; // Tocou no chão, graça encerra
                 if (f.vy < 0) {
-                    if (Math.abs(f.vy) < 0.7) {
+                    if (Math.abs(f.vy) < 0.8) {
                         f.vy = 0; // Repouso inelástico - para de quicar e assenta
                     } else {
-                        f.vy = -f.vy * 0.12; // Quique suave e amortecido
+                        f.vy = -f.vy * 0.14; // Quique amortecido
                     }
                 }
                 f.vx *= floorFriction;
                 f.vRotZ *= 0.65;
-                if (Math.abs(f.vx) < 0.25 && Math.abs(f.vy) < 0.25) {
+                if (Math.abs(f.vx) < 0.18 && Math.abs(f.vy) < 0.18) {
                     f.vRotZ = 0;
                 }
             }
 
             // Colisão com a Parede Curva do Pote Gordinho
-            // Mantemos a colisão estritamente horizontal para impedir impulsos verticais indesejados
-            const maxR = getJarInnerRadius(f.y) - f.radius * 0.96;
+            const maxR = getJarInnerRadius(f.y) - f.radius * 0.97;
             if (Math.abs(f.x) > maxR) {
                 const side = Math.sign(f.x);
                 f.x = side * maxR;
 
                 if (f.vx * side > 0) {
-                    f.vx = -f.vx * 0.12; // Quique amortecido horizontal
-                    f.vy *= 0.94;        // Atrito de deslizamento na parede
+                    f.vx = -f.vx * 0.14; // Quique amortecido horizontal
+                    f.vy *= 0.95;        // Atrito de deslizamento na parede
                     f.vRotZ *= 0.75;
                     if (Math.abs(f.vx) > 0.8 && step === 0) {
                         playGlassHitSound();
@@ -1655,7 +1656,7 @@ function updatePhysics(dt) {
             }
         }
 
-        // 2. Colisão Círculo-Círculo & Fusão
+        // 2. Colisão Círculo-Círculo, Efeito Cunha/Empurrão & Fusão
         for (let i = 0; i < fruits.length; i++) {
             for (let j = i + 1; j < fruits.length; j++) {
                 const a = fruits[i];
@@ -1665,8 +1666,8 @@ function updatePhysics(dt) {
                 const dx = b.x - a.x;
                 const dy = b.y - a.y;
                 const distSq = dx * dx + dy * dy;
-                // Tolerância snug (0.94): contato físico direto entre superfícies visuais sem lacuna de ar
-                const minDist = (a.radius + b.radius) * 0.94;
+                // Tolerância snug (0.96): contato físico direto entre cascas das frutas sem lacuna de ar nem clipping exagerado
+                const minDist = (a.radius + b.radius) * 0.96;
 
                 if (distSq < minDist * minDist && distSq > 1e-7) {
                     // Tocou em outra fruta: fim da graça de queda livre
@@ -1686,50 +1687,68 @@ function updatePhysics(dt) {
 
                     const totalMass = a.mass + b.mass;
 
-                    // Separação posicional suave (Baumgarte com slop anti-jitter)
-                    const slop = 0.002;
-                    const resolveAmount = Math.max(0, overlap - slop) * 0.75;
-                    const moveA = resolveAmount * (b.mass / totalMass);
-                    const moveB = resolveAmount * (a.mass / totalMass);
+                    // Separação posicional completa (100% de overlap resolvido)
+                    const moveA = overlap * (b.mass / totalMass);
+                    const moveB = overlap * (a.mass / totalMass);
 
                     a.x -= nx * moveA;
                     a.y -= ny * moveA;
                     b.x += nx * moveB;
                     b.y += ny * moveB;
 
+                    // --- DINÂMICA DE CUNHA & EMPURRÃO DE FRUTAS ---
+                    // Quando uma fruta de cima se apoia na fruta de baixo, a curvatura
+                    // gera um empurrão lateral forte: a fruta de baixo é empurrada pro lado,
+                    // e a fruta de cima escorrega ativamente para o vale/vão mais baixo!
+                    const topFruit = a.y >= b.y ? a : b;
+                    const botFruit = a.y >= b.y ? b : a;
+                    const diffX = botFruit.x - topFruit.x;
+                    const absDiffX = Math.abs(diffX);
+                    // Desempata alinhamentos perfeitamente verticais para evitar pontes estáticas suspensas
+                    const pushSign = absDiffX < 0.02 ? ((topFruit.id.charCodeAt(0) % 2 === 0) ? 1 : -1) : Math.sign(diffX);
+                    const slope = Math.min(1.0, absDiffX / (dist + 0.001));
+
+                    // Força de cunha proporcional à gravidade e ao peso da fruta de cima
+                    const wedgeAccel = Math.abs(gravity) * (0.85 + slope * 1.4);
+                    const pushImpulse = wedgeAccel * sdt;
+
+                    // Empurra a fruta de baixo para o lado (abrindo espaço)
+                    botFruit.vx += pushSign * pushImpulse * (topFruit.mass / totalMass);
+                    // Acelera a fruta de cima pelo declive em direção ao vale
+                    topFruit.vx -= pushSign * pushImpulse * (botFruit.mass / totalMass);
+
                     // Velocidade relativa ao longo da normal
                     const rvx = a.vx - b.vx;
                     const rvy = a.vy - b.vy;
                     const velAlongNormal = rvx * nx + rvy * ny;
 
-                    // GUARD ESSENCIAL: Se estiverem se afastando (velAlongNormal <= 0),
-                    // NUNCA aplicar impulso de atração!
                     if (velAlongNormal > 0) {
-                        // Restituição inelástica para repouso (elimina tremedeira)
-                        const restitution = velAlongNormal > 0.85 ? 0.12 : 0.0;
+                        // Restituição orgânica responsiva (toque elástico macio)
+                        const restitution = 0.20;
                         const impulse = ((1 + restitution) * velAlongNormal) / totalMass;
 
                         a.vx -= impulse * b.mass * nx;
                         a.vy -= impulse * b.mass * ny;
-                        b.vx += impulse * a.mass * nx;
+                        // Impulso extra no impacto lateral para afastar frutas atingidas
+                        b.vx += impulse * a.mass * nx * 1.30;
                         b.vy += impulse * a.mass * ny;
 
-                        // Atrito tangencial (impede deslizamento descontrolado)
+                        // Atrito tangencial suave
                         const tx = -ny;
                         const ty = nx;
                         const velAlongTangent = rvx * tx + rvy * ty;
-                        const frictionImpulse = velAlongTangent * 0.18;
+                        const frictionImpulse = velAlongTangent * 0.08;
 
                         a.vx -= frictionImpulse * (b.mass / totalMass) * tx;
                         a.vy -= frictionImpulse * (b.mass / totalMass) * ty;
                         b.vx += frictionImpulse * (a.mass / totalMass) * tx;
                         b.vy += frictionImpulse * (a.mass / totalMass) * ty;
 
-                        // Amortecimento rotacional no contato (elimina rotação perpétua entre frutas)
-                        a.vRotZ *= 0.80;
-                        b.vRotZ *= 0.80;
-                        if (Math.abs(a.vx) < 0.25 && Math.abs(a.vy) < 0.25) a.vRotZ = 0;
-                        if (Math.abs(b.vx) < 0.25 && Math.abs(b.vy) < 0.25) b.vRotZ = 0;
+                        // Amortecimento rotacional no contato
+                        a.vRotZ *= 0.85;
+                        b.vRotZ *= 0.85;
+                        if (Math.abs(a.vx) < 0.20 && Math.abs(a.vy) < 0.20) a.vRotZ = 0;
+                        if (Math.abs(b.vx) < 0.20 && Math.abs(b.vy) < 0.20) b.vRotZ = 0;
 
                         // Expressão de impacto em batidas fortes
                         if (velAlongNormal > 2.8 && step === 0) {
@@ -2280,10 +2299,101 @@ function triggerGameOver() {
     document.getElementById('final-score').textContent = score;
     document.getElementById('final-best').textContent = `Recorde: ${bestScore}`;
     document.getElementById('gameover-modal').style.display = 'flex';
+
+    // Ocasionalmente exibe anúncio intersticial respeitando o cooldown de 3min
+    showUnityInterstitialAd();
+}
+
+// --- SISTEMA DE ANÚNCIOS UNITY ADS & REGRAS DAS PLATAFORMAS (LGPD & Marco Legal) ---
+let lastInterstitialTime = Date.now();
+const INTERSTITIAL_COOLDOWN_MS = 180000; // 3 minutos de intervalo (Diretrizes Google Play / Marco Legal dos Games)
+let adTimerInterval = null;
+let currentAdSuccessCallback = null;
+
+function watchAdToRevive() {
+    showUnityRewardedAd(
+        () => {
+            // Recompensa confirmada: reviver o jogo
+            reviveGame();
+        },
+        () => {
+            console.log('[Unity Ads] Anúncio recompensado não completado.');
+        }
+    );
+}
+
+function showUnityRewardedAd(onRewardSuccess, onRewardFail) {
+    if (window.AndroidBridge && typeof window.AndroidBridge.showRewardedAd === 'function') {
+        window.onAdRewardSuccess = () => {
+            if (typeof onRewardSuccess === 'function') onRewardSuccess();
+        };
+        window.onAdRewardFail = () => {
+            if (typeof onRewardFail === 'function') onRewardFail();
+        };
+        window.AndroidBridge.showRewardedAd();
+    } else {
+        // Fallback para Web / Plataforma Gratuita (Simulador de Anúncio Unity Ads)
+        showWebAdSimulator('Vídeo Recompensado Unity Ads', onRewardSuccess);
+    }
+}
+
+function showUnityInterstitialAd() {
+    const now = Date.now();
+    if (now - lastInterstitialTime < INTERSTITIAL_COOLDOWN_MS) {
+        return; // Respeita cooldown para não frustrar o jogador
+    }
+    lastInterstitialTime = now;
+    if (window.AndroidBridge && typeof window.AndroidBridge.showInterstitialAd === 'function') {
+        window.AndroidBridge.showInterstitialAd();
+    }
+}
+
+function showWebAdSimulator(title, onSuccess) {
+    currentAdSuccessCallback = onSuccess;
+    const modal = document.getElementById('unity-ad-modal');
+    const countdownEl = document.getElementById('unity-ad-countdown');
+    const closeBtn = document.getElementById('unity-ad-close-btn');
+
+    if (!modal || !countdownEl) {
+        if (typeof onSuccess === 'function') onSuccess();
+        return;
+    }
+
+    modal.style.display = 'flex';
+    if (closeBtn) closeBtn.style.display = 'none';
+
+    let timeLeft = 5;
+    countdownEl.textContent = `${timeLeft}s`;
+
+    if (adTimerInterval) clearInterval(adTimerInterval);
+    adTimerInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft > 0) {
+            countdownEl.textContent = `${timeLeft}s`;
+        } else {
+            clearInterval(adTimerInterval);
+            countdownEl.textContent = '✅ Concluído!';
+            if (closeBtn) {
+                closeBtn.style.display = 'block';
+                closeBtn.textContent = '✨ Receber Recompensa';
+            }
+        }
+    }, 1000);
+}
+
+function closeWebAdModal() {
+    const modal = document.getElementById('unity-ad-modal');
+    if (modal) modal.style.display = 'none';
+    if (adTimerInterval) clearInterval(adTimerInterval);
+    if (typeof currentAdSuccessCallback === 'function') {
+        const cb = currentAdSuccessCallback;
+        currentAdSuccessCallback = null;
+        cb();
+    }
 }
 
 function reviveGame() {
-    // Revive removendo as 3 frutas mais altas (ótimo hook para Rewarded Ad)
+    // Revive removendo as 3 frutas mais altas (concedido após Unity Ads Rewarded)
     document.getElementById('gameover-modal').style.display = 'none';
     const dangerBadge = document.getElementById('danger-badge');
     if (dangerBadge) dangerBadge.style.display = 'none';
@@ -2305,6 +2415,7 @@ function reviveGame() {
 }
 
 function restartGame() {
+    showUnityInterstitialAd();
     for (let f of fruits) scene.remove(f.group);
     fruits = [];
     for (let p of particles) scene.remove(p.mesh);
