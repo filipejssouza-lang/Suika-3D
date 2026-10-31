@@ -4,4 +4,5 @@
         <item name="android:windowBackground">@color/suika_bg</item>
         <item name="android:windowFullscreen">true</item>
     </style>
+    <style name="Theme.Suika3D" parent="Theme.FruitPop3D" />
 </resources>
